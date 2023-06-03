@@ -49,6 +49,7 @@ public class TestCompressor {
         "/Stocks-UK.csv",
         "/Stocks-USA.csv",
         "/Wind-Speed.csv",
+        "/demo.csv",
     };
     private static final String STORE_PATH = "src/test/resources/result";
 
