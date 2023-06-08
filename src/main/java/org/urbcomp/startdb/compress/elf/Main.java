@@ -1,36 +1,48 @@
 package org.urbcomp.startdb.compress.elf;
 
+import org.urbcomp.startdb.compress.delta.compressor.DeltaCompressor;
 import org.urbcomp.startdb.compress.elf.compressor.*;
 import org.urbcomp.startdb.compress.elf.decompressor.*;
+import org.urbcomp.startdb.compress.elf.utils.Erase;
+import sun.misc.DoubleConsts;
 
 import java.util.List;
 
 public class Main {
     public static void main(String[] args) {
-        double[] vs = new double[] {
-                        93.85,
-                        -38.88,
-                        532.64,
-                        326.52,
-                        -1107.21,
-                        211.1,
-                        9.34,
-                        238.77,
-                        -103.54};
-        ICompressor compressor = new ElfOnChimpCompressor();
-        for (double v : vs) {
-            compressor.addValue(v);
-        }
-        compressor.close();
+        System.out.println(Long.toBinaryString(DoubleConsts.SIGNIF_BIT_MASK));
+        System.out.println(Long.toBinaryString(DoubleConsts.EXP_BIT_MASK));
+        DeltaCompressor deltaCompressor = new DeltaCompressor();
+        double a = 29.686912;
+        double b = 29.686855;
+        deltaCompressor.addValue(a);
+        deltaCompressor.addValue(b);
+        System.out.println(Long.toBinaryString(Double.doubleToRawLongBits(a-b)));
+        long xor = Double.doubleToRawLongBits(a) ^ Double.doubleToRawLongBits(b);
+        System.out.println(Long.numberOfTrailingZeros(xor));
+        System.out.println(Long.toBinaryString(Double.doubleToRawLongBits(a)));
+        System.out.println(Long.toBinaryString(Double.doubleToRawLongBits(b)));
+        System.out.println(Long.toBinaryString(xor));
+        Erase storedVal = new Erase(106.586627);
+        Erase value = new Erase(29.663938);
+        double delta = storedVal.getErasedValue() - value.getErasedValue();
+        long deltaLong = Double.doubleToRawLongBits(delta);
+        int fAlpha = Math.min(storedVal.getfAlpha(), value.getfAlpha());
+        int eDelta = (((int) (deltaLong >> 52)) & 0x7ff)- 1023;
+        System.out.println(storedVal.getE()-1023);
+        int trailZeros = fAlpha - eDelta;
+        System.out.println(storedVal.getEraseBits());
+        System.out.println(delta);
+        System.out.println(Long.toBinaryString(deltaLong));
+        System.out.println(eDelta);
+        System.out.println(fAlpha);
+        System.out.println(trailZeros);
+        System.out.println(Long.toBinaryString(deltaLong >>> (trailZeros)));
+        System.out.println(storedVal.getE()-1023);
+        Erase d= new Erase(0.001545);
+        System.out.println(Long.toBinaryString(d.getLongErasedValue()));
+//        System.out.println(Long.numberOfTrailingZeros()erase.getLongErasedValue());
 
-        System.out.println(compressor.getSize());
 
-        byte[] result = compressor.getBytes();
-        IDecompressor decompressor = new ElfOnChimpDecompressor(result);
-        List<Double> values = decompressor.decompress();
-        assert(values.size() == vs.length);
-        for (int i = 0; i < values.size(); i++) {
-            assert(vs[i] == values.get(i));
-        }
     }
 }

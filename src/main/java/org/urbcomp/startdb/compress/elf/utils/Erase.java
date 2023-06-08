@@ -23,6 +23,84 @@ public class Erase {
 
     private int gAlpha;
 
+    private double erasedValue;
+
+    private int eraseBits;
+
+    private int state;
+
+
+    public int getE() {
+        return e;
+    }
+
+    public int getAlpha() {
+        return alpha;
+    }
+
+    public int getBetaStar() {
+        return betaStar;
+    }
+
+    public long getMask() {
+        return mask;
+    }
+
+    public int getfAlpha() {
+        return fAlpha;
+    }
+
+    public int getgAlpha() {
+        return gAlpha;
+    }
+
+    public double getErasedValue() {
+        return erasedValue;
+    }
+    public long getLongErasedValue(){
+        return Double.doubleToRawLongBits(erasedValue);
+    }
+
+    public long getDeltaOfMPN() {
+        return deltaOfMPN;
+    }
+
+    private long deltaOfMPN;
+
+    public int getEraseBits() {
+        return eraseBits;
+    }
+
+    public Erase(double v){
+        long vLong = Double.doubleToRawLongBits(v);
+        long vPrimeLong;
+
+        if (v == 0.0 || Double.isInfinite(v)) {
+//            size += writeBit(false);
+            vPrimeLong = vLong;
+        } else if (Double.isNaN(v)) {
+//            size += writeBit(false);
+            vPrimeLong = 0xfff8000000000000L & vLong;
+        } else {
+            int[] alphaAndBetaStar = getAlphaAndBetaStar(v);
+            e = ((int) (vLong >> 52)) & 0x7ff;
+            fAlpha = getFAlpha(alphaAndBetaStar[0]);
+            gAlpha =  fAlpha + e - 1023;
+            eraseBits = 52 - gAlpha;
+            mask = 0xffffffffffffffffL << eraseBits;
+            deltaOfMPN = (~mask) & vLong;
+            if (alphaAndBetaStar[1] < 16 && deltaOfMPN != 0 && eraseBits > 4) {
+//                size += writeInt(alphaAndBetaStar[1] | 0x10, 5);
+                vPrimeLong = mask & vLong;
+            } else {
+//                size += writeBit(false);
+                vPrimeLong = vLong;
+            }
+        }
+//        size += xorCompress(vPrimeLong);
+        erasedValue = Double.longBitsToDouble(vPrimeLong);
+    }
+
     public static double erase(double v) {
         long vLong = Double.doubleToRawLongBits(v);
         long vPrimeLong;
