@@ -113,10 +113,12 @@ public class Erase {
             vPrimeLong = 0xfff8000000000000L & vLong;
         } else {
             int[] alphaAndBetaStar = getAlphaAndBetaStar(v);
-            System.out.println("alpha" + alphaAndBetaStar[0]);
+            System.out.println("alpha " + alphaAndBetaStar[0]);
             int e = ((int) (vLong >> 52)) & 0x7ff;
+            System.out.println("e "+(e-1023));
             int gAlpha = getFAlpha(alphaAndBetaStar[0]) + e - 1023;
-            System.out.println("gAlpha" + gAlpha);
+            System.out.println("fAlpha " + getFAlpha(alphaAndBetaStar[0]));
+            System.out.println("gAlpha " + gAlpha);
             int eraseBits = 52 - gAlpha;
             System.out.println("eraseBits " + eraseBits);
             long mask = 0xffffffffffffffffL << eraseBits;
@@ -192,8 +194,9 @@ public class Erase {
     }
 
     public static void main(String[] args) {
-        System.out.println(erase(31.988432));
-        System.out.println(erase(32.001277));
+        System.out.println(erase(32.001237));
+        System.out.println(32.001237*10000000);
+        System.out.println(erase(32.0017));
         System.out.println("----------------------------------------------------------------------------------");
         System.out.println(erase(29.66239));
         System.out.println(erase(32.00123));
@@ -206,10 +209,9 @@ public class Erase {
         System.out.println("----------------------------------------------------------------------------------");
         System.out.println(erase(29.66));
         System.out.println(erase(29.66));
-        System.out.println(31.988432 - 32.001277);
+        System.out.println(31.988432 - 32.0017);
 
-        System.out.println(32.001277*10);
 
-        System.out.println(Long.toBinaryString(Double.doubleToRawLongBits(erase(31.988432) - erase(32.001277))));
+        System.out.println(Long.toBinaryString(Double.doubleToRawLongBits(erase(31.9884) - erase(32.001714))));
     }
 }

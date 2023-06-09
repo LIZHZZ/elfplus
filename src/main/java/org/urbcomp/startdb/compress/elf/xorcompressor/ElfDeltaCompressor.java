@@ -74,12 +74,12 @@ public class ElfDeltaCompressor {
         } else {
             //sign 1
             if (delta < 0) {
-                int fAlpha = Math.min(storedVal.getfAlpha(), value.getfAlpha());
+                int fAlpha = Math.max(storedVal.getfAlpha(), value.getfAlpha());
 
                 int eDelta = (((int) (deltaLong >> 52)) & 0x7ff) - 1023;
                 int trailZeros = fAlpha - eDelta;
 
-                out.writeBit(true);
+                out.writeBit(true);// 符号位
                 out.writeLong(deltaLong >>> (12 + trailZeros), (52 - trailZeros));
             }
         }
