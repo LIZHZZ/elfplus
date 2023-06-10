@@ -9,9 +9,13 @@ public class ElfDeltaCompressor {
 
     private final OutputBitStream out;
 
-    private Erase storedVal;
+    private long storedVal;
 
     private final static long END_SIGN = Double.doubleToLongBits(Double.NaN);
+
+    private double storedDeltaE;
+
+    private int storedFAlpha;
 
     private boolean first = true;
 
@@ -25,27 +29,28 @@ public class ElfDeltaCompressor {
         return this.out;
     }
 
+
     /**
      * Adds a new long value to the series. Note, values must be inserted in order.
      *
      * @param value next floating point value in the series
      */
-    public int addValue(Erase value) {
+    public int addValue(long value,int fAlpha) {
         if (first) {
             return writeFirst(value);
         } else {
-            return compressValue(value);
+            return compressValue(value,fAlpha);
         }
     }
 
 
-    private int writeFirst(Erase value) {
+    private int writeFirst(long value) {
         first = false;
         storedVal = value;
-        int trailingZeros = Long.numberOfTrailingZeros(value.getLongErasedValue());
+        int trailingZeros = Long.numberOfTrailingZeros(value);
         out.writeInt(trailingZeros, 7);
         if (trailingZeros < 64) {
-            out.writeLong(storedVal.getLongErasedValue() >>> (trailingZeros + 1), 63 - trailingZeros);
+            out.writeLong(storedVal >>> (trailingZeros + 1), 63 - trailingZeros);
             size += 70 - trailingZeros;
             return 70 - trailingZeros;
         } else {
@@ -55,15 +60,15 @@ public class ElfDeltaCompressor {
     }
 
     public void close() {
-//        addValue(END_SIGN);
+        addValue(END_SIGN,0);
         out.writeBit(false);
         out.flush();
     }
 
 
-    private int compressValue(Erase value) {
+    private int compressValue(long value, int fAlpha) {
         int thisSize = 0;
-        double delta = storedVal.getErasedValue() - value.getErasedValue();
+        double delta = Double.longBitsToDouble(storedVal) - Double.longBitsToDouble(value);
         long deltaLong = Double.doubleToRawLongBits(delta);
 
         if (delta == 0) {
@@ -72,19 +77,38 @@ public class ElfDeltaCompressor {
             size += 2;
             thisSize += 2;
         } else {
-            //sign 1
-            if (delta < 0) {
-                int fAlpha = Math.max(storedVal.getfAlpha(), value.getfAlpha());
+            int maxFAlpha = Math.max(storedFAlpha, fAlpha);
+            int eDelta = (((int) (deltaLong >> 52)) & 0x7ff) - 1023;
+            int trailZeros = 52 - maxFAlpha - eDelta;
 
-                int eDelta = (((int) (deltaLong >> 52)) & 0x7ff) - 1023;
-                int trailZeros = fAlpha - eDelta;
+            if (eDelta == storedDeltaE) {
+                out.writeInt(2, 2); // 10 deltaE = deltaE store
+                //sign 1
+                out.writeBit(delta < 0);    // 符号位
+                out.writeLong(deltaLong >>> trailZeros, 52 - trailZeros);
+                size += 3 + 52 - trailZeros;
+                thisSize += 3 + 52 - trailZeros;
 
-                out.writeBit(true);// 符号位
-                out.writeLong(deltaLong >>> (12 + trailZeros), (52 - trailZeros));
+            } else {
+                storedDeltaE = eDelta;
+                out.writeInt(3, 2); // 11 deltaE != deltaE store
+                //sign 1
+                out.writeBit(delta < 0);    // 符号位
+                out.writeLong(deltaLong >>> 52, 11);    //e bits
+                out.writeLong(deltaLong >>> trailZeros, 52 - trailZeros);
+                size += 3 + 11 + 52 - trailZeros;
+                thisSize += 3 + 11 + 52 - trailZeros;
             }
+            storedVal = value;
         }
-        return 0;
+        return thisSize;
+    }
+    public int getSize() {
+        return size;
     }
 
+    public byte[] getOut() {
+        return out.getBuffer();
+    }
 
 }
