@@ -52,6 +52,7 @@ public class DeltaOnElfCompressor implements ICompressor {
 
 
     public void addValue(double v) {
+        System.out.println("-------------------------------------------");
         long vLong = Double.doubleToRawLongBits(v);
         long vPrimeLong;
         int fAlpha = 0;
@@ -59,9 +60,11 @@ public class DeltaOnElfCompressor implements ICompressor {
 
         if (v == 0.0 || Double.isInfinite(v)) {
             size += writeInt(2, 2); // case 10
+            System.out.println("case 10");
             vPrimeLong = vLong;
         } else if (Double.isNaN(v)) {
             size += writeInt(2, 2); // case 10
+            System.out.println("case 10");
             vPrimeLong = 0xfff8000000000000L & vLong;
         } else {
             // C1: v is a normal or subnormal
@@ -73,19 +76,24 @@ public class DeltaOnElfCompressor implements ICompressor {
             int eraseBits = 52 - gAlpha;
             long mask = 0xffffffffffffffffL << eraseBits;
             long delta = (~mask) & vLong;
-            if (delta != 0 && eraseBits > 4) {  // C2
-                if (alphaAndBetaStar[1] == lastBetaStar) {
-                    size += writeBit(false);    // case 0
-                } else {
-                    size += writeInt(alphaAndBetaStar[1] | 0x30, 6);  // case 11, 2 + 4 = 6
-                    lastBetaStar = alphaAndBetaStar[1];
-                }
-                vPrimeLong = mask & vLong;
+//            if (delta != 0 && eraseBits > 4) {  // C2
+            if (alphaAndBetaStar[1] == lastBetaStar) {
+                size += writeBit(false);    // case 0
+                System.out.println("case 0");
             } else {
-                size += writeInt(2, 2); // case 10
-                vPrimeLong = vLong;
+                size += writeInt(alphaAndBetaStar[1] | 0x30, 6);  // case 11, 2 + 4 = 6
+                System.out.println("case 11");
+                System.out.println("betaStar: " + alphaAndBetaStar[1]);
+                lastBetaStar = alphaAndBetaStar[1];
             }
+            vPrimeLong = mask & vLong;
+//            } else {
+//                System.out.println("case 10");
+//                size += writeInt(2, 2); // case 10
+//                vPrimeLong = vLong;
+//            }
         }
+        System.out.println(Double.longBitsToDouble(vPrimeLong));
         size += deltaCompress(vPrimeLong, fAlpha);
     }
 
@@ -112,16 +120,17 @@ public class DeltaOnElfCompressor implements ICompressor {
 
     @Override
     public int getSize() {
-        return 0;
+        return size;
     }
 
     @Override
     public byte[] getBytes() {
-        return new byte[0];
+        return deltaCompressor.getOut();
     }
 
     @Override
     public void close() {
-
+        writeInt(2, 2);  // case 10
+        deltaCompressor.close();
     }
 }
